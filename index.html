@@ -478,6 +478,22 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       .normalize("NFD").replace(/[̀-ͯ]/g,"")
       .toLowerCase().trim();
   }
+  // Repairs "double-encoded" text (e.g. "CÃ³digo" instead of "Código") that some
+  // access-control systems produce when they export UTF-8 text as if it were Latin-1.
+  function fixMojibake(s){
+    if(typeof s!=="string" || !/[\u0080-\u00ff]/.test(s)) return s;
+    try{
+      var bytes=[];
+      for(var i=0;i<s.length;i++){
+        var code=s.charCodeAt(i);
+        if(code>0xff) return s;
+        bytes.push(code);
+      }
+      return new TextDecoder("utf-8",{fatal:true}).decode(new Uint8Array(bytes));
+    }catch(e){
+      return s;
+    }
+  }
   function pad2(n){ return (n<10?"0":"")+n; }
   function minutesToHHMM(mins){
     var h=Math.floor(mins/60), m=Math.round(mins%60);
@@ -647,6 +663,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     try{
       var ws=state.workbook.Sheets[sheetName];
       var aoa=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
+      aoa=aoa.map(function(row){ return row.map(function(cell){ return fixMojibake(cell); }); });
       var hIdx=findHeaderRow(aoa);
       if(hIdx===-1){
         showError("No encontré las columnas esperadas (Fecha/Data y Evento) en la hoja \""+sheetName+"\". Revisá que sea el archivo correcto.");
