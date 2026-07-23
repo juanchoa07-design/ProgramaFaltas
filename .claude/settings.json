@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /tmp/xlsx.full.min.js -w \"%{http_code} %{size_download}\\\\n\" https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js --max-time 20)",
+      "Skill(artifact-design)",
+      "Skill(artifact-design:*)",
+      "Bash(python3 -c ' *)",
+      "Bash(grep -n '\\\\\\\\u' control-asistencia.html)",
+      "Bash(grep -v '\\\\\\\\u00')",
+      "Bash(python3 _check.py)",
+      "Bash(curl -s -o /tmp/xlsx.mini.min.js -w \"%{http_code} %{size_download}\\\\n\" https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.mini.min.js --max-time 20)",
+      "Bash(python3 -c \"import sys; print\\(sys.platform\\)\")",
+      "Bash(python3 _rebuild.py)",
+      "Bash(rm _rebuild.py _check.py)",
+      "Bash(rm -f \"C:\\\\Users\\\\juanc\\\\AppData\\\\Local\\\\Temp\\\\app_check.js\")"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\juanc\\AppData\\Local\\Temp"
+    ]
+  }
+}
