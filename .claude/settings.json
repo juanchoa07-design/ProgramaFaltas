@@ -12,7 +12,13 @@
       "Bash(python3 -c \"import sys; print\\(sys.platform\\)\")",
       "Bash(python3 _rebuild.py)",
       "Bash(rm _rebuild.py _check.py)",
-      "Bash(rm -f \"C:\\\\Users\\\\juanc\\\\AppData\\\\Local\\\\Temp\\\\app_check.js\")"
+      "Bash(rm -f \"C:\\\\Users\\\\juanc\\\\AppData\\\\Local\\\\Temp\\\\app_check.js\")",
+      "Bash(python3 _fix.py)",
+      "Bash(rm _fix.py)",
+      "Bash(node \"C:\\\\Users\\\\juanc\\\\AppData\\\\Local\\\\Temp\\\\test_mojibake.js\")",
+      "Bash(rm -f \"C:\\\\Users\\\\juanc\\\\AppData\\\\Local\\\\Temp\\\\test_mojibake.js\" \"C:\\\\Users\\\\juanc\\\\AppData\\\\Local\\\\Temp\\\\app_current.js\")",
+      "Bash(node --check \"C:\\\\Users\\\\juanc\\\\AppData\\\\Local\\\\Temp\\\\app_final.js\")",
+      "Bash(rm -f \"C:\\\\Users\\\\juanc\\\\AppData\\\\Local\\\\Temp\\\\app_final.js\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\juanc\\AppData\\Local\\Temp"
