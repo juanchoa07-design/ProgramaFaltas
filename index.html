@@ -512,20 +512,57 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
   }
   function dateKey(y,m,d){ return y+"-"+pad2(m)+"-"+pad2(d); }
 
-  function parseDateCell(v){
+  function parseDateCell(v, refMonth){
     if(v instanceof Date && !isNaN(v)) return dateKey(v.getFullYear(), v.getMonth()+1, v.getDate());
+    if(typeof v==="number"){
+      // numero de serie de Excel (dias desde 1899-12-30): sin ambiguedad de formato
+      var d=new Date(Math.round((v-25569)*86400*1000));
+      return dateKey(d.getUTCFullYear(), d.getUTCMonth()+1, d.getUTCDate());
+    }
     var s=normalize(v);
     if(!s) return null;
     var m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
-    if(m){
-      var a=+m[1], b=+m[2], y=+m[3];
-      if(y<100) y+=2000;
-      // dataset format observed is D/M/Y (day first)
-      var day=a, mon=b;
-      if(day>31){ var t=day; day=y; y=t; } // safety, unlikely
-      return dateKey(y, mon, day);
+    if(!m) return null;
+    var a=+m[1], b=+m[2], y=+m[3];
+    if(y<100) y+=2000;
+    var day, mon;
+    if(a>12){ day=a; mon=b; } // inequivoco: a solo puede ser dia
+    else if(b>12){ day=b; mon=a; } // inequivoco: b solo puede ser dia
+    else if(refMonth && a===refMonth && b!==refMonth){ day=b; mon=a; }
+    else if(refMonth && b===refMonth && a!==refMonth){ day=a; mon=b; }
+    else { day=a; mon=b; } // ambiguo sin referencia: asumo D/M/Y (formato mas comun del dataset)
+    return dateKey(y, mon, day);
+  }
+
+  // Detecta el mes real del archivo usando las filas no ambiguas de la columna
+  // de fecha (donde uno de los dos numeros es >12), para poder resolver
+  // correctamente las filas ambiguas (dia y mes ambos <=12, ej. primera
+  // quincena de un mes) que de otro modo podrian quedar invertidas.
+  function detectReferenceMonth(aoa, hIdx, dateColIdx){
+    var counts={};
+    for(var i=hIdx+1;i<aoa.length;i++){
+      var r=aoa[i];
+      if(!r || r.length===0) continue;
+      var v=r[dateColIdx];
+      var mon=null;
+      if(v instanceof Date && !isNaN(v)){
+        mon=v.getMonth()+1;
+      } else {
+        var s=normalize(v);
+        var m=s && s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+        if(m){
+          var a=+m[1], b=+m[2];
+          if(a>12) mon=b;
+          else if(b>12) mon=a;
+        }
+      }
+      if(mon) counts[mon]=(counts[mon]||0)+1;
     }
-    return null;
+    var best=null, bestCount=0;
+    Object.keys(counts).forEach(function(k){
+      if(counts[k]>bestCount){ bestCount=counts[k]; best=+k; }
+    });
+    return best;
   }
 
   function parseTimeCell(v){
@@ -602,7 +639,14 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
     reader.onload=function(e){
       try{
         var data=new Uint8Array(e.target.result);
-        var wb=XLSX.read(data,{type:"array",cellDates:true});
+        // raw:true (y sin cellDates) a proposito: sin esto, SheetJS adivina
+        // que las celdas de texto tipo "11/05/2026" son fechas y las
+        // convierte el mismo asumiendo M/D/Y, invirtiendo dia y mes en los
+        // casos ambiguos (dia<=12) ANTES de que nuestro codigo las vea.
+        // Con raw:true las fechas de texto quedan crudas y las interpretamos
+        // nosotros en parseDateCell; las fechas nativas de un .xlsx real
+        // (numero de serie) siguen llegando sin ambiguedad.
+        var wb=XLSX.read(data,{type:"array",raw:true});
         state.workbook=wb;
         fileMeta.innerHTML="Archivo cargado: <strong>"+file.name+"</strong>";
         fileMeta.classList.add("show");
@@ -678,6 +722,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
       var rows=[];
       var sessionDatesSet={};
       var empMap={}; // code -> name frequency
+      var refMonth=detectReferenceMonth(aoa, hIdx, colMap.date);
 
       for(var i=hIdx+1;i<aoa.length;i++){
         var r=aoa[i];
@@ -685,7 +730,7 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
         var evt=normalize(r[colMap.event]);
         if(evt.indexOf("conced")===-1) continue; // only granted access events count as a real punch
 
-        var dk=parseDateCell(r[colMap.date]);
+        var dk=parseDateCell(r[colMap.date], refMonth);
         var tm=colMap.time!==undefined?parseTimeCell(r[colMap.time]):null;
         var code=(r[colMap.code]===undefined||r[colMap.code]==="")?null:String(r[colMap.code]).trim();
         var name=(colMap.name!==undefined?String(r[colMap.name]||"").trim():"");
